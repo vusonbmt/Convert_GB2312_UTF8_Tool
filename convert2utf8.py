@@ -10,19 +10,32 @@ def get_files_by_extension(folder_path, extension):
     return glob.glob(file_pattern, recursive=True)
 
 def convert_encoding(file_path, input_encoding, output_encoding):
-    with codecs.open(file_path, 'r', encoding=input_encoding) as file:
-        content = file.read()
-    with codecs.open(file_path, 'w', encoding=output_encoding) as file:
-        file.write(content)
-
-def is_valid_encoding(file_path, output_encoding):
+    with open(file_path, 'rb') as f:
+        content = f.read()
+    # For force update 
     try:
-        with codecs.open(file_path, 'r', encoding=output_encoding) as file:
-            file.read()
-        return True
+        content = content.decode(input_encoding)
     except UnicodeDecodeError:
-        print(f"Error: {file_path} contains illegal multibyte sequence.")
-        return False
+        content = content.decode(input_encoding, errors='replace')
+    content = content.encode(output_encoding, errors='replace')
+    with open(file_path, 'wb') as f:
+        f.write(content)
+    # For ignore file which convert error
+    # try:
+    #     with codecs.open(file_path, 'r', encoding=input_encoding) as file:
+    #         content = file.read()
+    # except UnicodeDecodeError:
+    #     print(f"Skipping file {file_path}: illegal multibyte sequence")
+    #     return False
+
+    # try:
+    #     with codecs.open(file_path, 'w', encoding=output_encoding) as file:
+    #         file.write(content)
+    # except Exception as e:
+    #     print(f"Error converting file {file_path}: {e}")
+    #     return False
+    
+    # return True
     
 def convert_files_encoding(folder_path, extensions, input_encoding, output_encoding):
     files = []
@@ -30,20 +43,18 @@ def convert_files_encoding(folder_path, extensions, input_encoding, output_encod
         files += get_files_by_extension(folder_path, extension)
 
     for file in files:
-        try:
-            # Get the directory and name of the file
-            file_dir, file_name = os.path.split(file)
-            # Set the full path of the new file with the same extension
-            new_file_path = os.path.join(file_dir, file_name)
-            # Check if the file can be encoded with the output encoding 
-            if is_valid_encoding(file, output_encoding):
-                # Convert the encoding of the file and save it with the same name
-                convert_encoding(file, input_encoding, output_encoding)
-                os.rename(file, new_file_path)
-            else:
-                print(f"Skipping file: {file}")            
-        except Exception as e:
-            print(f"Error converting {file}: {e}")            
+        # try:
+        # Get the directory and name of the file
+        file_dir, file_name = os.path.split(file)
+        # Set the full path of the new file with the same extension
+        new_file_path = os.path.join(file_dir, file_name)
+        # Convert the encoding of the file and save it with the same name
+        # if log_enabled:
+        print(f"Converting file {file}")
+        success = convert_encoding(file, input_encoding, output_encoding)
+        if success:
+            os.rename(file, new_file_path)
+
         
 def main():
     if len(sys.argv) < 2:
